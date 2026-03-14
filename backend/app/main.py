@@ -51,6 +51,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.get("/")
+    def root():
+        return {"service": settings.app_name, "docs": "/docs", "health": "/health"}
+
     app.include_router(health_router)
     app.include_router(forecasts_router)
 
