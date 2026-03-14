@@ -108,7 +108,6 @@ export default function Home() {
   return (
     <main className="page-shell">
       <section className="hero">
-        <p className="eyebrow">Phase 2 Dashboard</p>
         <h1>UK Wind Forecast Monitor</h1>
         <p className="muted">
           Compare actual generation against selected forecast points by date range and horizon.

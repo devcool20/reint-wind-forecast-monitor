@@ -1,11 +1,12 @@
 "use client";
 
 import {
+  ComposedChart,
   CartesianGrid,
   Legend,
   Line,
-  LineChart,
   ResponsiveContainer,
+  Scatter,
   Tooltip,
   XAxis,
   YAxis,
@@ -23,6 +24,7 @@ type ChartPoint = {
   targetTimestamp: string;
   actual: number | null;
   forecast: number | null;
+  overlap: number | null;
 };
 
 const numberFormatter = new Intl.NumberFormat("en-GB", {
@@ -44,6 +46,10 @@ function buildChartData(points: ForecastPoint[]): ChartPoint[] {
     targetTimestamp: point.target_time,
     actual: point.actual_generation_mw,
     forecast: point.forecast_generation_mw,
+    overlap:
+      point.actual_generation_mw !== null && point.forecast_generation_mw !== null
+        ? point.actual_generation_mw
+        : null,
   }));
 }
 
@@ -51,6 +57,7 @@ export function ForecastChart({ points, appliedHorizonHours }: ForecastChartProp
   const data = buildChartData(points);
   const forecastPointCount = data.filter((point) => point.forecast !== null).length;
   const actualPointCount = data.filter((point) => point.actual !== null).length;
+  const overlapPointCount = data.filter((point) => point.overlap !== null).length;
 
   if (data.length === 0) {
     return (
@@ -66,11 +73,11 @@ export function ForecastChart({ points, appliedHorizonHours }: ForecastChartProp
       <h2 className="panel-title">Wind Generation Series</h2>
       <p className="muted small">
         Applied horizon: {appliedHorizonHours ?? "-"}h | Actual points: {actualPointCount} | Forecast points:{" "}
-        {forecastPointCount}
+        {forecastPointCount} | Overlap points: {overlapPointCount}
       </p>
       <div className="chart-wrap">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 20, right: 20, left: 0, bottom: 10 }}>
+          <ComposedChart data={data} margin={{ top: 20, right: 20, left: 0, bottom: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.12)" />
             <XAxis
               dataKey="targetTimeLabel"
@@ -103,7 +110,12 @@ export function ForecastChart({ points, appliedHorizonHours }: ForecastChartProp
                   ? `${numberFormatter.format(numericValue)} MW`
                   : "-";
 
-                const displayName = name === "actual" ? "Actual" : "Forecast";
+                const displayName =
+                  name === "actual" || name === "Actual generation"
+                    ? "Actual generation"
+                    : name === "overlap" || name === "Overlap points"
+                      ? "Overlap points"
+                      : "Forecast generation";
                 return [displayValue, displayName];
               }}
               contentStyle={{
@@ -113,9 +125,7 @@ export function ForecastChart({ points, appliedHorizonHours }: ForecastChartProp
                 color: "#e5ebfa",
               }}
             />
-            <Legend
-              formatter={(value) => (value === "actual" ? "Actual generation" : "Forecast generation")}
-            />
+            <Legend />
             <Line
               type="monotone"
               dataKey="actual"
@@ -123,7 +133,7 @@ export function ForecastChart({ points, appliedHorizonHours }: ForecastChartProp
               strokeWidth={2}
               dot={false}
               connectNulls={false}
-              name="Actual"
+              name="Actual generation"
             />
             <Line
               type="monotone"
@@ -134,9 +144,16 @@ export function ForecastChart({ points, appliedHorizonHours }: ForecastChartProp
               dot={{ r: 2 }}
               activeDot={{ r: 4 }}
               connectNulls={false}
-              name="Forecast"
+              name="Forecast generation"
             />
-          </LineChart>
+            <Scatter
+              dataKey="overlap"
+              name="Overlap points"
+              fill="#f59e0b"
+              stroke="#fde68a"
+              strokeWidth={1.25}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </section>
