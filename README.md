@@ -115,11 +115,6 @@ Notebooks:
   - Root directory: `frontend`
   - Env: `NEXT_PUBLIC_BACKEND_URL=<Render backend URL>`
 
-For the exact step‑by‑step flow I followed, see:
-- `docs/STEP2-FRONTEND.md`
-- `docs/STEP3-ANALYSIS.md`
-- `docs/STEP4-DEPLOYMENT.md`
-- `docs/STEP5-SUBMISSION.md`
 
 ## Links (to be filled before submission)
 
