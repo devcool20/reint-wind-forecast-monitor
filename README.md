@@ -120,8 +120,8 @@ Notebooks:
 
 - App demo: `https://reint-wind-forecast-monitor.vercel.app/`
 - Backend API: `https://reint-wind-forecast-api.onrender.com`
-- Demo video: `<unlisted-youtube-url>`
-- Repo zip (with `.git`): `<google-drive-url>`
+- Demo video: `https://youtu.be/wk202XHnUlw`
+- Repo zip (with `.git`): `(https://drive.google.com/file/d/1yLmZljZGfM-rPushohomHzmefkhl8ZBD/view?usp=sharing)`
 
 ## AI tools
 
