@@ -1,12 +1,10 @@
 "use client";
 
 import {
-  ComposedChart,
+  LineChart,
   CartesianGrid,
-  Legend,
   Line,
   ResponsiveContainer,
-  Scatter,
   Tooltip,
   XAxis,
   YAxis,
@@ -24,7 +22,6 @@ type ChartPoint = {
   targetTimestamp: string;
   actual: number | null;
   forecast: number | null;
-  overlap: number | null;
 };
 
 const numberFormatter = new Intl.NumberFormat("en-GB", {
@@ -40,16 +37,19 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
+function formatCompact(value: number): string {
+  if (Math.abs(value) >= 1000) {
+    return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}k`;
+  }
+  return String(value);
+}
+
 function buildChartData(points: ForecastPoint[]): ChartPoint[] {
   return points.map((point) => ({
     targetTimeLabel: dateTimeFormatter.format(new Date(point.target_time)),
     targetTimestamp: point.target_time,
     actual: point.actual_generation_mw,
     forecast: point.forecast_generation_mw,
-    overlap:
-      point.actual_generation_mw !== null && point.forecast_generation_mw !== null
-        ? point.actual_generation_mw
-        : null,
   }));
 }
 
@@ -57,7 +57,6 @@ export function ForecastChart({ points, appliedHorizonHours }: ForecastChartProp
   const data = buildChartData(points);
   const forecastPointCount = data.filter((point) => point.forecast !== null).length;
   const actualPointCount = data.filter((point) => point.actual !== null).length;
-  const overlapPointCount = data.filter((point) => point.overlap !== null).length;
 
   if (data.length === 0) {
     return (
@@ -69,91 +68,89 @@ export function ForecastChart({ points, appliedHorizonHours }: ForecastChartProp
   }
 
   return (
-    <section className="panel chart-panel">
-      <h2 className="panel-title">Wind Generation Series</h2>
-      <p className="muted small">
-        Applied horizon: {appliedHorizonHours ?? "-"}h | Actual points: {actualPointCount} | Forecast points:{" "}
-        {forecastPointCount} | Overlap points: {overlapPointCount}
+    <section className="chart-panel-light">
+      <h2 className="chart-title-light">Wind Generation Series</h2>
+      <p className="chart-subtitle-light">
+        Applied horizon: {appliedHorizonHours ?? "-"}h &middot; Actual points: {actualPointCount} &middot; Forecast
+        points: {forecastPointCount}
       </p>
       <div className="chart-wrap">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 20, right: 20, left: 0, bottom: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.12)" />
+          <LineChart data={data} margin={{ top: 16, right: 24, left: 8, bottom: 24 }}>
+            <CartesianGrid stroke="#e5e7eb" strokeDasharray="none" vertical={false} />
             <XAxis
               dataKey="targetTimeLabel"
-              minTickGap={28}
-              tick={{ fill: "#a3adc2", fontSize: 12 }}
-              tickMargin={8}
+              minTickGap={36}
+              tick={{ fill: "#6b7280", fontSize: 12 }}
+              tickMargin={10}
+              axisLine={{ stroke: "#d1d5db" }}
+              tickLine={{ stroke: "#d1d5db" }}
+              label={{
+                value: "Target Time End (UTC)",
+                position: "insideBottom",
+                offset: -16,
+                style: { fill: "#6b7280", fontSize: 13, fontWeight: 500 },
+              }}
             />
             <YAxis
-              tick={{ fill: "#a3adc2", fontSize: 12 }}
-              tickFormatter={(value: number) => `${numberFormatter.format(value)} MW`}
-              width={96}
+              tick={{ fill: "#6b7280", fontSize: 12 }}
+              tickFormatter={formatCompact}
+              width={56}
+              axisLine={{ stroke: "#d1d5db" }}
+              tickLine={{ stroke: "#d1d5db" }}
+              label={{
+                value: "Power (MW)",
+                angle: -90,
+                position: "insideLeft",
+                offset: 4,
+                style: { fill: "#6b7280", fontSize: 13, fontWeight: 500, textAnchor: "middle" },
+              }}
             />
             <Tooltip
               labelFormatter={(_, payload) => {
-                if (!payload || payload.length === 0) {
-                  return "";
-                }
+                if (!payload || payload.length === 0) return "";
                 const point = payload[0].payload as ChartPoint;
                 return dateTimeFormatter.format(new Date(point.targetTimestamp)) + " UTC";
               }}
               formatter={(value, name) => {
                 const numericValue =
-                  typeof value === "number"
-                    ? value
-                    : typeof value === "string"
-                      ? Number(value)
-                      : Number.NaN;
-
+                  typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
                 const displayValue = Number.isFinite(numericValue)
                   ? `${numberFormatter.format(numericValue)} MW`
                   : "-";
-
-                const displayName =
-                  name === "actual" || name === "Actual generation"
-                    ? "Actual generation"
-                    : name === "overlap" || name === "Overlap points"
-                      ? "Overlap points"
-                      : "Forecast generation";
+                const displayName = name === "actual" ? "Actual" : "Forecast";
                 return [displayValue, displayName];
               }}
               contentStyle={{
-                backgroundColor: "#0f1420",
-                border: "1px solid #26324b",
-                borderRadius: 12,
-                color: "#e5ebfa",
+                backgroundColor: "#ffffff",
+                border: "1px solid #e5e7eb",
+                borderRadius: 8,
+                color: "#1f2937",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
               }}
+              cursor={{ stroke: "#9ca3af", strokeDasharray: "4 4" }}
             />
-            <Legend />
             <Line
               type="monotone"
               dataKey="actual"
-              stroke="#60a5fa"
-              strokeWidth={2}
+              stroke="#3b82f6"
+              strokeWidth={2.5}
               dot={false}
+              activeDot={{ r: 4, fill: "#3b82f6", stroke: "#fff", strokeWidth: 2 }}
               connectNulls={false}
-              name="Actual generation"
+              name="actual"
             />
             <Line
               type="monotone"
               dataKey="forecast"
-              stroke="#34d399"
+              stroke="#22c55e"
               strokeWidth={2.5}
-              strokeDasharray="5 4"
-              dot={{ r: 2 }}
-              activeDot={{ r: 4 }}
-              connectNulls={false}
-              name="Forecast generation"
+              dot={false}
+              activeDot={{ r: 4, fill: "#22c55e", stroke: "#fff", strokeWidth: 2 }}
+              connectNulls
+              name="forecast"
             />
-            <Scatter
-              dataKey="overlap"
-              name="Overlap points"
-              fill="#f59e0b"
-              stroke="#fde68a"
-              strokeWidth={1.25}
-            />
-          </ComposedChart>
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </section>

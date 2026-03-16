@@ -1,52 +1,54 @@
-# REint Wind Forecast Monitor
+## Overview
 
-Full-stack challenge submission for monitoring UK wind generation forecasts vs actuals, plus analysis notebooks for forecast error and wind reliability.
+This repo contains my submission for the **REint Full‑Stack SWE challenge**.
 
-## Project Structure
+The goal is to:
+- Build a **forecast monitoring app** for UK wind power, showing actual vs forecast generation for January 2024, and
+- Produce **analysis notebooks** that quantify forecast error and answer: *“How much wind capacity can we rely on?”*
 
-- `backend/` - FastAPI API that fetches BMRS datasets and returns merged actual-vs-forecast series.
-- `frontend/` - Next.js dashboard with date-range, horizon slider, charting, and refresh controls.
-- `analysis/` - Jupyter notebooks for forecast-error analysis and reliability recommendation.
-- `docs/` - Step-by-step execution checklists.
+The stack is:
+- **Backend** – Python, FastAPI, `httpx`, Pandas, Docker (deployed on Render)
+- **Frontend** – TypeScript, Next.js (App Router), Recharts (deployed on Vercel)
+- **Analysis** – Jupyter, Pandas/NumPy/Seaborn
 
-## Features Implemented
+## Layout
 
-### Backend (Phase 1)
+- `backend/` – FastAPI service talking to BMRS (`FUELHH` for actuals, `WINDFOR` for forecasts) and exposing `/api/forecasts`.
+- `frontend/` – Next.js dashboard with date range, horizon slider, stats cards, and chart.
+- `analysis/` – Two notebooks: forecast error analysis and wind reliability recommendation.
+- `docs/` – Short checklists for frontend, analysis, deployment, and submission.
 
-- BMRS integration for `FUELHH` (actual) and `WINDFOR` (forecast).
-- Forecast selection rule: latest forecast published at least `horizon` hours before target.
-- Validation:
-  - January 2024 date window only.
-  - Horizon bounds: 0-48 hours.
-  - Invalid input errors with clear messages.
-- CORS configuration via env.
-- Health endpoint and forecasts endpoint.
-- Unit tests for core forecast-selection logic.
+## What the app does
 
-### Frontend (Phase 2)
+- **Aligns BMRS actuals and forecasts**
+  - Pulls January 2024 data for `fuelType == "WIND"` from `FUELHH` (actual generation).
+  - Pulls matching `WINDFOR` forecasts.
+  - For each 30‑minute target time, selects the **latest forecast** whose `publishTime` is at most `target_time – horizon` and whose effective horizon is in \[0, 48] hours.
+  - If there is no valid forecast for a target time, that point is left as “actual‑only” and is not plotted as a forecast.
 
-- Responsive dashboard layout with header/footer.
-- Date range picker and horizon slider controls.
-- Recharts line chart with tooltip and legend.
-- Stats cards for coverage metadata.
-- Loading, error, and empty-data states.
-- Manual refresh + optional auto-refresh every 60 seconds.
+- **Serves a simple, explicit API**
+  - `GET /api/forecasts?start=ISO&end=ISO&horizon=H`  
+    Returns:
+    - `metadata` (counts of total/actual/forecast/overlap points)
+    - `forecast_horizon_hours`
+    - Aligned point series with `actual_generation_mw` and `forecast_generation_mw`.
+  - Validates:
+    - Dates are inside January 2024.
+    - `start <= end`.
+    - `horizon` in \[0, 48].
 
-### Analysis (Phase 3)
+- **Visualizes the data clearly**
+  - Date range picker, horizon slider, manual and auto refresh.
+  - Main chart:
+    - Blue line – actual generation.
+    - Green dashed line + points – forecast generation.
+    - Amber markers – overlap points where both series exist at the same timestamp.
+  - Stats row summarizing total, applied horizon, and coverage (actuals / forecasts / overlaps).
+  - Designed to work cleanly on both desktop and mobile.
 
-- `analysis/forecast_error_analysis.ipynb`
-  - mean/median/p99 and RMSE metrics
-  - horizon-wise error behavior
-  - time-of-day error behavior
-- `analysis/reliability_analysis.ipynb`
-  - historical actual wind generation summary
-  - availability curve
-  - bootstrap CI around P10 reliability estimate
-  - MW recommendation scaffold with caveats
+## Local development
 
-## Local Setup
-
-### 1) Backend
+### Backend
 
 ```powershell
 cd backend
@@ -57,13 +59,13 @@ copy .env.example .env
 uvicorn app.main:app --reload --port 8000
 ```
 
-Quick test:
+Quick sanity check:
 
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:8000/api/forecasts?start=2024-01-01T00:00:00Z&end=2024-01-02T00:00:00Z&horizon=4"
 ```
 
-### 2) Frontend
+### Frontend
 
 ```powershell
 cd frontend
@@ -72,9 +74,9 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Then open `http://localhost:3000`.
 
-## Quality Checks
+## Tests and quality checks
 
 ### Backend
 
@@ -91,39 +93,44 @@ npm run lint
 npm run build
 ```
 
-## Running Analysis Notebooks
+## Analysis notebooks
 
-Backend must be running locally (`http://localhost:8000`).
+Backend needs to be reachable at `http://localhost:8000` (or you can hard‑code the Render URL in the notebooks if desired).
 
 ```powershell
 cd analysis
 jupyter lab
 ```
 
-Then execute:
+Notebooks:
+- `forecast_error_analysis.ipynb` – error distributions (mean/median/p99), behaviour by horizon, and time‑of‑day patterns.
+- `reliability_analysis.ipynb` – historical wind generation, availability curve, and MW recommendation with rationale.
 
-- `forecast_error_analysis.ipynb`
-- `reliability_analysis.ipynb`
+## Deployment
 
-## Deployment (Phase 4)
+- **Backend** – Dockerized FastAPI on Render:
+  - Start command: `uvicorn app.main:app --host 0.0.0.0 --port 8000`
+  - Important env vars: `CORS_ALLOW_ORIGINS`, horizon bounds, January window (see `backend/.env.example`).
+- **Frontend** – Next.js app on Vercel:
+  - Root directory: `frontend`
+  - Env: `NEXT_PUBLIC_BACKEND_URL=<Render backend URL>`
 
-- Deploy backend on Railway/Render.
-- Deploy frontend on Vercel and set:
-  - `NEXT_PUBLIC_BACKEND_URL=<deployed_backend_url>`
-
-Use detailed checklists:
-
+For the exact step‑by‑step flow I followed, see:
 - `docs/STEP2-FRONTEND.md`
 - `docs/STEP3-ANALYSIS.md`
 - `docs/STEP4-DEPLOYMENT.md`
 - `docs/STEP5-SUBMISSION.md`
 
-## Submission Placeholders
+## Links (to be filled before submission)
 
-- App demo link: `<to-fill>`
-- Demo video link: `<to-fill>`
-- Repo zip (with `.git`) link: `<to-fill>`
+- App demo: `https://reint-wind-forecast-monitor.vercel.app/`
+- Backend API: `https://reint-wind-forecast-api.onrender.com`
+- Demo video: `<unlisted-youtube-url>`
+- Repo zip (with `.git`): `<google-drive-url>`
 
-## AI Tool Disclosure
+## AI tools
 
-AI coding assistance was used for implementation acceleration, debugging support, and documentation drafting. Final code, validation, and analysis interpretation were reviewed manually.
+I used AI assistance (Cursor / GPT‑style tools) for:
+- Boilerplate generation (FastAPI/Next.js wiring, CSS scaffolding)
+- Refactoring suggestions and debugging help
+- Drafting documentation, which I then edited by hand.
